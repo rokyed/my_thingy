@@ -1,4 +1,4 @@
- function CMS (EventHandler) { 
+ function CMS () { 
      this.clsName = "ROOT";
      var me = this;
      this.classes = {};
@@ -225,6 +225,7 @@
 
              this.instantiatedClasses[uid][readyCall]();
          }
+         return uid;
      };
 
      this.clone = function (obj) {
@@ -245,14 +246,18 @@
 
 }
 
+// ---------------------------declaration of class management system-----------------------------------
+
 var cms = new CMS();
 
+//------------------------------------------------ class blueprinting----------------------------------
+// mixin ( no requirement to declare config)
 cms.addClass("MXRock", {
      rockThePlace: function(motto){
          alert(motto);
      }
 });
-
+// base class ( no requirement to declare config ( mixin and base class are the same thing)
 cms.addClass("Animal", {
     config: {
         makeSound: "craaa",
@@ -269,6 +274,7 @@ cms.addClass("Animal", {
         alert( this.get("makeSound"));
     }
 });
+// extended class from base class note the action extend
 cms.addClass("Bird", {
     config: {
         sing: "pi pi pi po"
@@ -281,6 +287,7 @@ cms.addClass("Bird", {
     }
 },"extend","Animal");
 
+// extended class from exended class 
 cms.addClass("Pigeon", {
     mixins:[
         "MXRock"
@@ -292,6 +299,7 @@ cms.addClass("Pigeon", {
     }
 },"extend","Bird");
 
+// overrides anything inside class to override 
 cms.addClass("OVRDBird", {
     config: {
         sing: " i'ma skatman!"
@@ -301,5 +309,24 @@ cms.addClass("OVRDBird", {
     }
 },"override","Bird");
 
+//------------------------ class instantiation -------------------------------
+// note last argument is optional ( callback with no arguments)
 
+// also the method returns the unique id of the class
 
+// note 'type' inside first argument(object) is the defining class
+cms.makeInstance({
+    type:"Animal",
+    config:{
+        domElem:"iframe",
+        domStyle:"position:absolute;top:200px;left:500px;width:100px;height:200px;border: solid 3px #f00;background-color:#0f0"
+    }
+},"domTrace");
+// note first argument(string) is the defining class 
+cms.makeInstance("Animal",
+     {
+         config:{
+             domElem:"iframe",
+             domStyle:"position:absolute;top:200px;left:0px;width:100px;height:200px;border: solid 3px #f00;background-color:#000"
+         }
+     },"domTrace");
