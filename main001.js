@@ -2,6 +2,8 @@
      this.clsName = "ROOT";
      var me = this;
      this.classes = {};
+     this.instantiatedClasses = {};
+     this.instanceId = 0;
      this.liveVars = {};
 
 
@@ -137,10 +139,7 @@
          this.addBasics(processedContents, classname);
 
          // creation is done
-
          this.classes[classname] = processedContents;
-                 
-        
          
      };
      
@@ -150,10 +149,98 @@
 
      };
 
-     this.copyItem = function(itemName,fromObj,toObj){
+     this.copyItem = function (itemName,fromObj,toObj){
          toObj[itemName] = fromObj[itemName];
-     }
+     };
 
+     this.mergeItems = function (objA, objB, overrideB) {
+         var merged = this.clone(objB);
+         for (item in objA){
+             if(!merged[item] || overrideB)
+                 this.copyItem(item, objA, merged);
+         }
+         
+     };
+
+     this.applySettings = function (settings,onInstance) {
+         if (settings.config){
+             for(item in settings.config){
+                 me.copyItem(item, settings.config, onInstance.config);  
+             }
+         }
+         for (item in settings) {
+             if(item != "config" && item != "className"){
+                 me.copyItem(item, settings, onInstance);
+             }
+         }
+     };
+
+
+     this.generateInstanceUID = function (classname) {
+         return classname+this.instanceId++;
+     };
+   
+     this.makeInstance = function () {
+         var classname, settings, readyCall=false;
+         debugger;
+         if (arguments.length == 0)
+             return;
+         if (arguments.length == 1) {
+             // if its object(settings)
+             settings = arguments[0];
+             classname = settings.type;
+         }
+
+         if (arguments.length == 2) {
+             if ( typeof arguments[0] == "object") {
+                 // if is object(settings) and callback 
+                 settings = arguments[0];
+                 classname = settings.type;
+                 readyCall = arguments[1];
+
+             } else {
+                 // if is classname and object(settings)
+                 classname = arguments[0];
+                 settings = arguments[1];
+             }
+
+         }
+
+         if (arguments.length >= 3) {
+             //if its classname , object(settings) ,callback
+             classname = arguments[0];
+             settings = arguments[1];
+             readyCall = arguments[2];
+         }
+
+
+         var refObj = this.classes[classname],
+             newClone = this.clone(refObj),
+             uid = this.generateInstanceUID(classname);
+
+         this.applySettings(settings,newClone);
+
+         this.instantiatedClasses[uid] = newClone;
+         if(readyCall) {
+
+             this.instantiatedClasses[uid][readyCall]();
+         }
+     };
+
+     this.clone = function (obj) {
+         if (obj == null || typeof(obj) != 'object')
+             return obj;
+
+         var temp = obj.constructor(); // changed
+
+         for (var key in obj) {
+             if (obj.hasOwnProperty(key)) {
+                 temp[key] = this.clone(obj[key]);
+             }
+         }
+         return temp;
+     };
+   
     
 
 }
@@ -168,10 +255,18 @@ cms.addClass("MXRock", {
 
 cms.addClass("Animal", {
     config: {
-        makeSound: "craaa"
+        makeSound: "craaa",
+        domElem: "div",
+        domStyle: "background-color:#333333;min-width:100px;min-height:100px;position:absolute;top:10px;left:10px;",
+        domObj: null
+    },
+    domTrace: function() { 
+        this.set("domObj", document.createElement(this.get("domElem")));
+        this.get("domObj").setAttribute("style",this.get("domStyle"));
+        document.body.appendChild(this.get("domObj")); 
     },
     doSomeSounds: function() {
-        alert( this.getMakeSound());
+        alert( this.get("makeSound"));
     }
 });
 cms.addClass("Bird", {
@@ -205,4 +300,6 @@ cms.addClass("OVRDBird", {
          alert(this.get("sing"));
     }
 },"override","Bird");
+
+
 
