@@ -3,94 +3,87 @@
      var me = this;
      this.classes = {};
      this.liveVars = {};
+
+
+     this.override = function (parentClass, contents) {
      
-     this.addClass = function (classname, itsContents, action, fromParent) {
-         //this.classes[name] = itsContents;
-         
-         var processedContents = {};
-         
-         if(itsContents["config"] === undefined ) {
-             itsContents["config"] = {};
+         var par = this.classes[parentClass];  
+         // override parent functions
+         for (item in contents) {
+             if(item != "config" && item != "className")
+                 me.copyItem(item, contents, par);
+         }
+         // override parent configs
+         for (item in contents.config) {
+             me.copyItem(item, contents.config, par.config);
          }
 
-         if (!action ||action == "define") {
-             processedContents = itsContents;
-         }
-         if ( action == "override" && fromParent) {
-             var par = this.classes[fromParent];  
-             // override parent functions
-             for( item in itsContents) {
-                 if(item != "config" && item != "className")
-                     par[item] = itsContents[item];
-             }
-             // override parent configs
-             for( item in itsContents.config) {
-                 par.config[item] = itsContents.config[item];
-             }
-         
-         }
+     };
 
-         if ( action == "extend" && fromParent) {
-             var par, i = 0; 
+     this.extend = function (processedContents, incommingContents, parentClass) {
+         var par, i = 0; 
              
-             par = this.classes[fromParent] ;
-             // set the parent of the class
-             processedContents["parentClass"] = par; 
-             // copy class contents into a processed object ( to be processed)
-             for (item in itsContents) {
-                 processedContents[item] = itsContents[item];
-
-             }
-             // copy items from parent to class if not in class
-             for (item in processedContents) {
-                 var itemFound = false;
-                 for(item2 in par){
-                     if( item != item2 && !itemFound && par[item2] !== undefined && processedContents[item2] === undefined ) {
-                         processedContents[item2] = par[item2];
-                         itemFound = true;
-                     }
-                 }
-             }
-             // copy config ( config is like config in sencha touch)
-             for(def in par.config){
-                 var found = false;
-                 for( xdef in processedContents.config) {
-                     if( xdef == def){
-                         found = true;
-                     }
-                 }
-                 if (!found) {
-                     processedContents.config[def] = par.config[def];
-                 }    
-
-             }
-
-            
+         par = this.classes[parentClass] ;
+         // set the parent of the class
+         processedContents["parentClass"] = par; 
+         // copy class contents into a processed object ( to be processed)
+         for (item in incommingContents) {
+             me.copyItem(item, incommingContents, processedContents);
          }
-         // creating the initial values ( in order to reset a variable to it's initial state)
-         processedContents["initials"] = {};
-         
-         for( def in processedContents.config) {
-             processedContents.initials[def] = processedContents.config[def];
-         }
-         
-         // copying mixins to class 
-         if(processedContents.mixins !== undefined) {
-             for(var i = 0; i <processedContents.mixins.length; i++) {
-                 var mixin = processedContents.mixins[i],
-                     mxin = me.classes[mixin];
-                 for( item in mxin) {
-                     if( item != "className" || item != "config") {
-                         processedContents[item] = mxin[item];
-                     }
+         // copy items from parent to class if not in class
+         for (item in processedContents) {
+             var itemFound = false;
+             for (item2 in par) {
+                 if (item != item2 && !itemFound && par[item2] !== undefined && processedContents[item2] === undefined) {
+                     me.copyItem(item2, par, processedContents);
+                     itemFound = true;
                  }
-                 
+             }
+         }
+         // copy config ( config is like config in sencha touch)
+         for (def in par.config) {
+             var found = false;
+             for (xdef in processedContents.config) {
+                 if (xdef == def) {
+                     found = true;
+                 }
+             }
+             if (!found) {
+                 me.copyItem(def, par.config, processedContents.config);
+             }    
+
+         }
+
+     
+     };
+
+     this.processMixins = function (processedContents) {
+         for (var i = 0; i <processedContents.mixins.length; i++) {
+             var mixin = processedContents.mixins[i],
+                 mxin = me.classes[mixin];
+             for (item in mxin) {
+                 if (item != "className" || item != "config") {
+                     me.copyItem(item, mxin, processedContents);
+                 }
+             }
              
-             }
-             delete processedContents["mixins"];
          
          }
+         delete processedContents["mixins"];
 
+     
+     };
+     this.setInitials = function (contents) {
+         contents["initials"] = {};
+         
+         for (def in contents.config) {
+             me.copyItem(def, contents.config, contents.initials);
+         }
+
+     
+     };
+
+     this.addBasics = function (processedContents,classname) {
          // generate universal getter , requires string (name of variable)
          processedContents["get"] = function (item) {
              return this.config[item];
@@ -112,7 +105,39 @@
          };
          // set classname for the class
          processedContents["className"] = classname;
+
+     };
+     
+     this.addClass = function (classname, itsContents, action, fromParent) {
+         var processedContents = {};
+         
+         if (!itsContents["config"]) {
+             itsContents["config"] = {};
+         }
+
+         if (!action || action == "define") {
+             processedContents = itsContents;
+         }
+
+         if (action == "override" && fromParent) {
+            this.override(fromParent, itsContents);
+         }
+
+         if (action == "extend" && fromParent) {
+             this.extend(processedContents, itsContents, fromParent); 
+         }
+         // creating the initial values ( in order to reset a variable to it's initial state)
+         this.setInitials(processedContents);
+         
+         // copying mixins to class 
+         if (processedContents.mixins !== undefined) {
+             this.processMixins(processedContents);         
+         }
+
+         this.addBasics(processedContents, classname);
+
          // creation is done
+
          this.classes[classname] = processedContents;
                  
         
@@ -124,6 +149,10 @@
          return prefix + word;
 
      };
+
+     this.copyItem = function(itemName,fromObj,toObj){
+         toObj[itemName] = fromObj[itemName];
+     }
 
     
 
