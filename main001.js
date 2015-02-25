@@ -33,7 +33,7 @@
              me.copyItem(item, incommingContents, processedContents);
          }
          // copy items from parent to class if not in class
-         for (item in processedContents) {
+         /*for (item in processedContents) {
              var itemFound = false;
              for (item2 in par) {
                  if (item != item2 && !itemFound && par[item2] !== undefined && processedContents[item2] === undefined) {
@@ -41,6 +41,10 @@
                      itemFound = true;
                  }
              }
+         }*/
+         for (item in par) {
+             if (!processedContents[item] && item != "config" && item != "className")
+                 me.copyItem(item, par, processedContents);
          }
          // copy config ( config is like config in sencha touch)
          for (def in par.config) {
@@ -182,7 +186,7 @@
    
      this.makeInstance = function () {
          var classname, settings, readyCall=false;
-         debugger;
+
          if (arguments.length == 0)
              return;
          if (arguments.length == 1) {
@@ -225,6 +229,7 @@
 
              this.instantiatedClasses[uid][readyCall]();
          }
+         this.instantiatedClasses[uid]["_unique_id"] = uid;
          return uid;
      };
 
@@ -232,7 +237,7 @@
          if (obj == null || typeof(obj) != 'object')
              return obj;
 
-         var temp = obj.constructor(); // changed
+         var temp = {}; 
 
          for (var key in obj) {
              if (obj.hasOwnProperty(key)) {
@@ -240,6 +245,19 @@
              }
          }
          return temp;
+     };
+
+     this.getInstance = function(uid) {
+         return this.instantiatedClasses[uid];
+     };
+     this.getAllInstancesOfType = function(classname){
+         var list = [];
+         for (obj in this.instantiatedClasses) {
+             if(this.instantiatedClasses[obj].className == classname){
+                 list.push(obj);
+             }
+         }
+         return list;
      };
    
     
@@ -250,6 +268,8 @@
 
 var cms = new CMS();
 
+
+/*
 //------------------------------------------------ class blueprinting----------------------------------
 // mixin ( no requirement to declare config)
 cms.addClass("MXRock", {
@@ -330,3 +350,166 @@ cms.makeInstance("Animal",
              domStyle:"position:absolute;top:200px;left:0px;width:100px;height:200px;border: solid 3px #f00;background-color:#000"
          }
      },"domTrace");
+
+
+//---------------------------new exemple ----------------------------------------------------------------------------
+*/
+
+cms.addClass("ScreenElement",{
+    config: {
+        type: "",
+        style: "",
+        id: "",
+        position: "absolute",
+        rect: {
+            x: 0,
+            y: 0,
+            width: 0,
+            height: 0 
+        },
+        domElement: null
+       
+    },
+    initialize: function() {
+         this.set("domElement", document.createElement(this.get("type")));
+         this.updateDom();
+         document.body.appendChild(this.get("domElement"));
+    },
+    resize: function(x, y, shallUpdate) {
+         var rect = this.get("rect");
+         rect.width = x;
+         rect.height = y;
+         this.set("rect",rect);
+
+         if(shallUpdate) this.updateDom();
+    },
+    position: function(x, y,shallUpdate) {
+         var rect = this.get("rect");
+         rect.x = x;
+         rect.y = y;
+         this.set("rect",rect);
+
+         if(shallUpdate) this.updateDom();
+    },
+    rectSetup: function(x, y, width, height,shallUpdate) {
+
+        if(shallUpdate) this.updateDom();
+    },
+    updateDom: function () {
+        var dElem = this.get("domElement"),
+            rect = this.get("rect"),
+            compiledStyle = "";
+        compiledStyle += this.get("style");
+        compiledStyle += ";position:" + this.get("position");
+        compiledStyle += ";top:" + rect.y + "px";
+        compiledStyle += ";left:" + rect.x + "px";
+        compiledStyle += ";width:" + rect.width  + "px";
+        compiledStyle += ";height:" + rect.height; + "px";
+
+        
+        
+        
+        dElem.setAttribute("style",compiledStyle);
+        dElem.setAttribute("id", this.get("id"));
+         
+    },
+    setId: function (id) {
+        this.set("id",id);
+        this.updateDom();
+    }
+});
+
+cms.addClass("Div",{
+    config: {
+        type: "div",
+        style: "position:absolute;border:solid 1px red;",
+        uncompStyle: {
+            position:"absolute",
+            border:"solid 1px red"
+        },
+        rect: {
+            x: 20,
+            y: 20,
+            width: 300,
+            height: 200
+        },
+        id: "div"
+    },
+    initialize: function() {
+         this.compileStyle();
+         this.callParent("initialize");
+    },
+    setStyle: function (css,value) {
+        var ustyle = this.get("uncompStyle");
+            ustyle[css] = value;
+        this.set("uncompStyle",ustyle);
+    },
+    compileStyle: function (shallUpdate) {
+         var style = "",
+             ustyle = this.get("uncompStyle");
+
+         for (css in ustyle) {
+             style += this.camelCaseToDash(css)+ ":" + ustyle[css] + ";";
+         }
+
+         this.set("style", style);
+    },
+    camelCaseToDash: function (str) {
+         return str.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+    }
+         
+    
+},"extend","ScreenElement");
+
+//--------------- let's have some fun -----------------
+var myDivs; 
+window.onload = function() {
+    for (var i = 0; i < 3000; i++) {
+        var hx = genHex();
+        cms.makeInstance({
+            type: "Div",
+            config: {
+                 rect: {
+                     width: 10,
+                     height: 10,
+                     x: Math.floor(Math.random() * window.innerWidth),
+                     y: Math.floor(Math.random() * window.innerHeight)
+                 },
+                 uncompStyle: {
+                     position:"absolute",
+                     backgroundColor:"#"+hx
+                 }
+            }
+        },"initialize");
+    }
+    myDivs = cms.getAllInstancesOfType("Div");
+      
+};
+
+
+var timerT = window.setInterval(function(){doit();},1);
+
+function doit() { 
+    for(var i = 0; i < myDivs.length; i++){
+        
+        var obJ = cms.getInstance(myDivs[i]),
+            pos = obJ.get("rect");
+        if(pos.x < -pos.width) pos.x = window.innerWidth;
+        if(pos.y < -pos.height) pos.y = window.innerHeight;
+        pos.x -= Math.random() * 2;
+        pos.y -= Math.random() * 2;
+        
+
+        obJ.position(pos.x,pos.y,true);
+    }
+
+}
+
+function genHex(){
+   
+    return Math.floor(Math.random() * 16777215).toString(16);    
+    
+}
+
+
+
