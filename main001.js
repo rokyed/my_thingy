@@ -25,7 +25,7 @@
      this.extend = function (processedContents, incommingContents, parentClass) {
          var par, i = 0; 
              
-         par = this.classes[parentClass] ;
+         par = this.classes[parentClass];
          // set the parent of the class
          processedContents["parentClass"] = par; 
          // copy class contents into a processed object ( to be processed)
@@ -33,15 +33,7 @@
              me.copyItem(item, incommingContents, processedContents);
          }
          // copy items from parent to class if not in class
-         /*for (item in processedContents) {
-             var itemFound = false;
-             for (item2 in par) {
-                 if (item != item2 && !itemFound && par[item2] !== undefined && processedContents[item2] === undefined) {
-                     me.copyItem(item2, par, processedContents);
-                     itemFound = true;
-                 }
-             }
-         }*/
+         
          for (item in par) {
              if (!processedContents[item] && item != "config" && item != "className")
                  me.copyItem(item, par, processedContents);
@@ -114,7 +106,7 @@
 
      };
      
-     this.addClass = function (classname, itsContents, action, fromParent) {
+     this.addBlueprint = function (classname, itsContents, action, fromParent) {
          var processedContents = {};
          
          if (!itsContents["config"]) {
@@ -259,257 +251,196 @@
          }
          return list;
      };
-   
-    
-
 }
 
-// ---------------------------declaration of class management system-----------------------------------
+/*
+// var cms = new CMS();
 
-var cms = new CMS();
+----- NOTE WE ARE USING THE WORD BLUEPRINT THE SAME AS CLASS 
+      SINCE THEY ARE THE SAME THING AND THEY ARE NOT AN INSTANCE OF 
+      CLASS OR BLUEPRINT
+
+
+/////////////////////////////////////
+// this is a base class declaration exemple:
+
+cms.addBlueprint("baseClassName",{
+    config: {
+        configuredValue1: "something",
+        configuredValue2: null
+    },
+    someFunction: function(args) {
+        return this.get("configuredValue1");
+    },
+    veryOldFunction: function(message) {
+        alert("The message is :" + message);
+    }
+});
+
+
+////////////////////////////////////
+// this is an extended class declaration exemple:
+
+cms.addBlueprint("childClassName",{
+    config: {
+        configuredValue3: "something"
+    },
+    someFunction: function() {
+        arguments.push(this.get("configuredValue2"))
+        return this.callParent("someFunction", arguments);
+    },
+    ohANewFunction: function(args) {
+        this.set("configuredValue3", args);
+        return this.get("configuredValue1");
+    }
+},"extends","baseClassName");
+
+
+
+////////////////////////////////////
+// this is an exended class from extended class declaration example:
+
+cms.addBlueprint("childOfChildClassName",{
+    config: {
+        anotherConfigValue:true
+    },
+    ultraNewFunction: function(args) {
+        this.set("anotherConfigValue",false);
+        this.veryOldFunction("oh it's still there , because it's inherited");   
+    }
+    
+},"extends","childClassName");
+
+////////////////////////////////////
+// this is an override that applies on the actual class 
+
+cms.addBlueprint("overidingClass",{
+    config: {
+        aNewVariable:"new value",
+        configuredValue1:"it's overrided now"
+    },
+    veryOldFunction: function() {
+        alert("this method has been overided")
+        for( var i = 0; i < arguments.length;i++){
+            alert(arguments[i]);
+        }
+        
+    },
+    specialNewFunction: function() {
+        alert("this function is new and was never made into the base class");
+    }
+},"override","baseClassName");
+
+*/
 
 
 /*
-//------------------------------------------------ class blueprinting----------------------------------
-// mixin ( no requirement to declare config)
-cms.addClass("MXRock", {
-     rockThePlace: function(motto){
-         alert(motto);
-     }
-});
-// base class ( no requirement to declare config ( mixin and base class are the same thing)
-cms.addClass("Animal", {
-    config: {
-        makeSound: "craaa",
-        domElem: "div",
-        domStyle: "background-color:#333333;min-width:100px;min-height:100px;position:absolute;top:10px;left:10px;",
-        domObj: null
-    },
-    domTrace: function() { 
-        this.set("domObj", document.createElement(this.get("domElem")));
-        this.get("domObj").setAttribute("style",this.get("domStyle"));
-        document.body.appendChild(this.get("domObj")); 
-    },
-    doSomeSounds: function() {
-        alert( this.get("makeSound"));
-    }
-});
-// extended class from base class note the action extend
-cms.addClass("Bird", {
-    config: {
-        sing: "pi pi pi po"
-    },
-    singSong: function() {
-        for( var i = 0; i < 3; i ++ ) {
-            alert(this.get("sing"));
-        }
-        alert(arguments[0]);
-    }
-},"extend","Animal");
 
-// extended class from exended class 
-cms.addClass("Pigeon", {
-    mixins:[
-        "MXRock"
-    ],
+--------------- Instances ----and extras---------------
 
-    singSong: function() {
-        this.set("sing","gotta rock to stay alive");
-        this.callParent("singSong","yeaahahhaaha");
-    }
-},"extend","Bird");
+cms.makeInstance() accepts up to 3 arguments
 
-// overrides anything inside class to override 
-cms.addClass("OVRDBird", {
-    config: {
-        sing: " i'ma skatman!"
-    },
-    singSong: function() {
-         alert(this.get("sing"));
-    }
-},"override","Bird");
+>>if only 1 argument then the argument is object and 
+    that object shall contain "type" as a reference blueprint
+     we want to use.
 
-//------------------------ class instantiation -------------------------------
-// note last argument is optional ( callback with no arguments)
+>>if 2 arguments then 
+    >>if first argument is an object 
+        is the same like only 1 argument 
 
-// also the method returns the unique id of the class
+    but second argument will be a string with the 
+    initialization function name 
+        (inside the new instance )
+        and it can't have arguments
 
-// note 'type' inside first argument(object) is the defining class
+    -------------------------
+
+    >>if first argument is a string 
+        ( is the reference of the blueprint used) 
+
+    but second argument will be the object with the
+        configs and new functions we want for that instance 
+
+    note ( no initialization function )
+
+>>if 3 arguments then
+
+    first argument is a string ( with the blueprint reference)
+
+    second argument is an object (with configs and new functions for the insance)
+
+    but second argument will be a string with the 
+        initialization function name 
+        (inside the new instance )
+        and it can't have arguments
+
+
+exemples : 
+////////////////////
+// with one argument:
+
+// blueprint reference as element inside object(argument)
 cms.makeInstance({
-    type:"Animal",
-    config:{
-        domElem:"iframe",
-        domStyle:"position:absolute;top:200px;left:500px;width:100px;height:200px;border: solid 3px #f00;background-color:#0f0"
-    }
-},"domTrace");
-// note first argument(string) is the defining class 
-cms.makeInstance("Animal",
-     {
-         config:{
-             domElem:"iframe",
-             domStyle:"position:absolute;top:200px;left:0px;width:100px;height:200px;border: solid 3px #f00;background-color:#000"
-         }
-     },"domTrace");
-
-
-//---------------------------new exemple ----------------------------------------------------------------------------
-*/
-
-cms.addClass("ScreenElement",{
+    type:"childClassName",
     config: {
-        type: "",
-        style: "",
-        id: "",
-        position: "absolute",
-        rect: {
-            x: 0,
-            y: 0,
-            width: 0,
-            height: 0 
-        },
-        domElement: null
-       
+        newConfigVal:"new val"
     },
-    initialize: function() {
-         this.set("domElement", document.createElement(this.get("type")));
-         this.updateDom();
-         document.body.appendChild(this.get("domElement"));
-    },
-    resize: function(x, y, shallUpdate) {
-         var rect = this.get("rect");
-         rect.width = x;
-         rect.height = y;
-         this.set("rect",rect);
-
-         if(shallUpdate) this.updateDom();
-    },
-    position: function(x, y,shallUpdate) {
-         var rect = this.get("rect");
-         rect.x = x;
-         rect.y = y;
-         this.set("rect",rect);
-
-         if(shallUpdate) this.updateDom();
-    },
-    rectSetup: function(x, y, width, height,shallUpdate) {
-
-        if(shallUpdate) this.updateDom();
-    },
-    updateDom: function () {
-        var dElem = this.get("domElement"),
-            rect = this.get("rect"),
-            compiledStyle = "";
-        compiledStyle += this.get("style");
-        compiledStyle += ";position:" + this.get("position");
-        compiledStyle += ";top:" + rect.y + "px";
-        compiledStyle += ";left:" + rect.x + "px";
-        compiledStyle += ";width:" + rect.width  + "px";
-        compiledStyle += ";height:" + rect.height; + "px";
-
-        
-        
-        
-        dElem.setAttribute("style",compiledStyle);
-        dElem.setAttribute("id", this.get("id"));
-         
-    },
-    setId: function (id) {
-        this.set("id",id);
-        this.updateDom();
+    evenANewFunction: function(){
+        alert(this.get("newConfigVal"));
     }
 });
 
-cms.addClass("Div",{
+
+
+///////////////////////
+// with two arguments:
+
+// blueprint reference as construction argument
+
+cms.makeInstance("childClassName",{
     config: {
-        type: "div",
-        style: "position:absolute;border:solid 1px red;",
-        uncompStyle: {
-            position:"absolute",
-            border:"solid 1px red"
-        },
-        rect: {
-            x: 20,
-            y: 20,
-            width: 300,
-            height: 200
-        },
-        id: "div"
+        newConfigVal:"new val"
     },
-    initialize: function() {
-         this.compileStyle();
-         this.callParent("initialize");
-    },
-    setStyle: function (css,value) {
-        var ustyle = this.get("uncompStyle");
-            ustyle[css] = value;
-        this.set("uncompStyle",ustyle);
-    },
-    compileStyle: function (shallUpdate) {
-         var style = "",
-             ustyle = this.get("uncompStyle");
-
-         for (css in ustyle) {
-             style += this.camelCaseToDash(css)+ ":" + ustyle[css] + ";";
-         }
-
-         this.set("style", style);
-    },
-    camelCaseToDash: function (str) {
-         return str.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+    evenANewFunction: function(){
+        alert(this.get("newConfigVal"));
     }
-         
-    
-},"extend","ScreenElement");
+});
 
-//--------------- let's have some fun -----------------
-var myDivs; 
-window.onload = function() {
-    for (var i = 0; i < 3000; i++) {
-        var hx = genHex();
-        cms.makeInstance({
-            type: "Div",
-            config: {
-                 rect: {
-                     width: 10,
-                     height: 10,
-                     x: Math.floor(Math.random() * window.innerWidth),
-                     y: Math.floor(Math.random() * window.innerHeight)
-                 },
-                 uncompStyle: {
-                     position:"absolute",
-                     backgroundColor:"#"+hx
-                 }
-            }
-        },"initialize");
+
+
+// blueprint reference as element inside object(argument)
+// second argument is an ready function trigger in the instance.
+
+cms.makeInstance({
+    type:"childClassName",
+    config: {
+        newConfigVal:"new val"
+    },
+    evenANewFunction: function(){
+        alert(this.get("newConfigVal"));
     }
-    myDivs = cms.getAllInstancesOfType("Div");
-      
-};
+},"evenANewFunction");
 
 
-var timerT = window.setInterval(function(){doit();},1);
+//////////////////////////
+// with 3 arguments: 
 
-function doit() { 
-    for(var i = 0; i < myDivs.length; i++){
-        
-        var obJ = cms.getInstance(myDivs[i]),
-            pos = obJ.get("rect");
-        if(pos.x < -pos.width) pos.x = window.innerWidth;
-        if(pos.y < -pos.height) pos.y = window.innerHeight;
-        pos.x -= Math.random() * 2;
-        pos.y -= Math.random() * 2;
-        
+// blueprint reference as first argument,
+// configs and sets (object) as second
+// ready function trigger in the instance as the third argument
 
-        obJ.position(pos.x,pos.y,true);
+cms.makeInstance("childClassName",{
+    config: {
+        newConfigVal:"new val"
+    },
+    evenANewFunction: function(){
+        alert(this.get("newConfigVal"));
     }
-
-}
-
-function genHex(){
-   
-    return Math.floor(Math.random() * 16777215).toString(16);    
-    
-}
+},"evenANewFunction");
 
 
 
+
+////////////// the end////////////////////
+  
+*/
