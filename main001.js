@@ -56,12 +56,13 @@ function CMS () {
     };
     this.ownSettings = {
         instanceId: 0,
-        blueprintList:[],
-        instanceList:[],
-        instanceTypeList:[]
+        _blueprintList:[],
+        _instanceList:[],
+        _instanceTypeList:[]
         };
     this.blueprints = {};
     this.instantiatedClasses = {};
+    this.instances = this.instantiatedClasses; // only used for external naming ( shorter )
     var me = this,
         kwd = this.keyWords;
 
@@ -70,52 +71,71 @@ function CMS () {
     this.setKeyword = function (keyWord, value) {
         this.keyWords[keyWord] = value;
     };
-
-    this.addToInstanceList = function (instance,type) {
-         this.ownSettings.instanceList.push(instance);
-         this.ownSettings.instanceTypeList.push(type);
+    // ----------------- faster but less flexible------------------------------
+    this._addToInstanceList = function (instance,type) {
+         this.ownSettings._instanceList.push(instance);
+         this.ownSettings._instanceTypeList.push(type);
     };
 
-    this.removeFromInstanceList = function (instance) {
-        for (var i = 0; i< this.ownSettings.instanceList.length; i++) {
-            if (this.ownSettings.instanceList[i] == instance) {
-                this.ownSettings.instanceList.splice(i,1);
-                this.ownSettings.instanceTypeList.splice(i,1);
+    this._removeFromInstanceList = function (instance) {
+        for (var i = 0; i< this.ownSettings._instanceList.length; i++) {
+            if (this.ownSettings._instanceList[i] == instance) {
+                this.ownSettings._instanceList.splice(i,1);
+                this.ownSettings._instanceTypeList.splice(i,1);
             }
         }
     };
 
-    this.getInstanceFromList = function (id) {
-         return this.ownSettings.instanceList[id];
+    this._getInstanceFromList = function (id) {
+         return this.ownSettings._instanceList[id];
     };
-    this.getInstanceTypeFromList = function (id) {
-         return this.ownSettings.instanceTypeList[id];
-    };
-
-    this.instanceListLength = function () {
-        return this.ownSettings.instanceList.length;
+    this._getInstanceTypeFromList = function (id) {
+         return this.ownSettings._instanceTypeList[id];
     };
 
-    this.addToBlueprintList = function (blueprint) {
-         this.ownSettings.blueprintList.push(blueprint);
+    this.__instanceListLength = function () {
+        return this.ownSettings._instanceList.length;
+    };
+
+    this._addToBlueprintList = function (blueprint) {
+         this.ownSettings._blueprintList.push(blueprint);
     };
 
 
-    this.removeFromBlueprintList = function (blueprint) {
-        for (var i = 0; i< this.ownSettings.blueprintList.length; i++) {
-            if (this.ownSettings.blueprintList[i] == blueprint) {
-                this.ownSettings.blueprintList.splice(i,1);
+    this._removeFromBlueprintList = function (blueprint) {
+        for (var i = 0; i< this.ownSettings._blueprintList.length; i++) {
+            if (this.ownSettings._blueprintList[i] == blueprint) {
+                this.ownSettings._blueprintList.splice(i,1);
 
             }
         }
     };
-    this.getBlueprintFromList = function (id) {
-        return this.ownSettings.blueprintList[id];
+    this._getBlueprintFromList = function (id) {
+        return this.ownSettings._blueprintList[id];
     };
-    this.blueprintListLength = function () {
-        return this.ownSettings.blueprintList.length;
+    this._blueprintListLength = function () {
+        return this.ownSettings._blueprintList.length;
     };
 
+    this._getAllInstancesOfType = function(classname) {
+        var list = [];
+        for (var i = 0; i < this._instanceListLength(); i++) {
+            if(classname == this._getInstanceTypeFromList(i))
+                list.push(this._getInstanceFromList(i));
+        }
+        return list;
+    };
+
+
+    this._destroyInstance = function (uid,lastCall) {
+        if(lastCall)
+            this.callFunction(arguments);
+
+        this._removeFromInstanceList(uid);
+        delete this.instantiatedClasses[uid];
+
+    };
+    //-------------------------------------------------------------------------
     // in order to populate types with new
     this.addType = function (typeToAdd){
         this.keyWords.types.push(typeToAdd);
@@ -215,7 +235,7 @@ function CMS () {
 
     };
 
-    this.addBlueprint = function (classname, itsContents, action, fromParent) {
+    this.addBlueprint = function (classname, itsContents, action, fromParent,addToFastList) {
         var processedContents = {};
 
         if (!itsContents[kwd.config]) {
@@ -245,7 +265,10 @@ function CMS () {
 
         // creation is done
         this.blueprints[classname] = processedContents;
-        this.addToBlueprintList(classname);
+
+        // it's limiting the flexibility but enhaces speed
+        if (addToFastList)
+            this._addToBlueprintList(classname);
 
     };
 
@@ -286,6 +309,9 @@ function CMS () {
         return classname + this.ownSettings.instanceId++;
     };
 
+    // NOTE : 4th argument is boolean and it only means if new instance
+    // should be added to instances array , to be used only if you are
+    // processing big amounts of data , else use the standard version
     this.makeInstance = function () {
         var classname, settings, readyCall=false;
 
@@ -330,18 +356,35 @@ function CMS () {
         }
 
         // second time we try searching in the first level of depth of the instance settings
-        if (!classname) {
-            for (var item in settings) {
-                for (var cls = 0; cls < this.ownSettings.blueprintList.length; cls++) {
 
-                    if (settings[item] == this.ownSettings.blueprintList[cls]) {
-                        classname = this.ownSettings.blueprintList[cls];
-                        // also we add the new item as type alias
-                        this.addType(item);
+        if (!classname) {
+            // fast implementation comes as 4th argument (boolean)
+            if (arguments[4] === true) {
+                for (var item in settings) {
+                    for (var cls = 0; cls < this.ownSettings._blueprintList.length; cls++) {
+
+                        if (settings[item] == this.ownSettings._blueprintList[cls]) {
+                            classname = this.ownSettings._blueprintList[cls];
+                            // also we add the new item as type alias
+                            this.addType(item);
+                        }
+                    }
+                }
+            } else {
+            // normal search
+                for (var item in settings) {
+                    for (var cls in this.blueprints) {
+
+                        if (settings[item] == cls) {
+                            classname = cls;
+                            // also we add the new item as type alias
+                            this.addType(item);
+                        }
                     }
                 }
             }
         }
+
 
         // third is a failure of finding referenced class
         if (!classname) {
@@ -362,7 +405,12 @@ function CMS () {
             this.instantiatedClasses[uid][readyCall]();
         }
         this.instantiatedClasses[uid][kwd.uniqueID] = uid;
-        this.addToInstanceList(uid,classname);
+
+
+        if(arguments[4] === true)
+            this._addToInstanceList(uid,classname);
+
+
         return uid;
     };
 
@@ -418,31 +466,45 @@ function CMS () {
 
         return this.instantiatedClasses[uid];
     };
-    this.getAllInstancesOfType = function(classname) {
-        var list = [];
-        for (var i = 0; i < this.instanceListLength(); i++) {
-            if(classname == this.getInstanceTypeFromList(i))
-                list.push(this.getInstanceFromList(i));
-        }
-        return list;
-    };
 
-    this.callFunction = function (onInstance,funcName){
+    // call function you need ( instancename (uid) , function name ,parameter1....)
+    this.callFunction = function (){
         var args = [];
+
         for (var i = 2; i < arguments.length; i++) {
             args.push(arguments[i]);
         }
-       return this.instantiatedClasses[onInstance][funcName](args);
-    }
+
+        return this.instantiatedClasses[arguments[0]][arguments[1]](args);
+    };
+
 
     this.destroyInstance = function (uid,lastCall) {
-        if(lastCall)
-            this.callFunction(uid,lastCall);
 
-        this.removeFromInstanceList(uid);
+        if(lastCall)
+            this.callFunction.apply(this,arguments);
+
         delete this.instantiatedClasses[uid];
 
-    }
+    };
+
+    this.getAllInstancesOfType = function(classname) {
+        var list = [];
+        for (var instance in this.instantiatedClasses) {
+            if (classname == this.instantiatedClasses[instance][kwd.className])
+                list.push(instance);
+        }
+        return list;
+    };
+    this.countItemsIn = function (element) {
+        var cnt = 0 ;
+
+        for (var i in element)
+            cnt ++;
+
+        return cnt;
+    };
+
 }
 
 /*

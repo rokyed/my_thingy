@@ -190,6 +190,7 @@ cms.addBlueprint("Div",{
         this.set("uncompStyle",ustyle);
     },
     compileStyle: function (shallUpdate) {
+
          var style = "",
              ustyle = this.get("uncompStyle");
 
@@ -222,16 +223,18 @@ cms.addBlueprint("Div",{
         this.updateDom();
     },
     camelCaseToDash: function (str) {
+
          return str.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
     }
 
 
 },"extend","ScreenElement");
 
+
+
 //--------------- let's have some fun -----------------
 var myDivs;
 window.onload = function() {
-
 
     for (var i = 0; i < 20; i++) {
         var hx = genHex();
@@ -260,7 +263,7 @@ window.onload = function() {
     for (var i = 0; i < 20; i++) {
         var hx = genHex();
         cms.makeInstance({
-            bsVar: "Div",
+            blablidylbla: "Div",
             config: {
                 rect: {
                     width: 10,
@@ -275,7 +278,9 @@ window.onload = function() {
                 },
                 uncompStyle: {
                     position:"absolute",
-                    backgroundColor:"#"+hx
+                    borderRadius:"5px",
+                    backgroundColor:"#"+hx,
+
                 }
             }
         },"initialize");
@@ -325,9 +330,10 @@ function genHex(){
 
 }
 
-function deleteAll(){
-    for(var i = cms.instanceListLength(); i--; ){
-        cms.destroyInstance(cms.getInstanceFromList(i),"destroy");
+function deleteAll(type,method){
+    var arr = cms.getAllInstancesOfType(type);
+    for(var i = arr.length; i--; ){
+        cms.destroyInstance(arr[i],method);
 
     }
 
