@@ -189,12 +189,22 @@ function CMS () {
     this.processMixins = function (processedContents) {
         for (var i = 0; i < processedContents.mixins.length; i++) {
             var mixin = processedContents.mixins[i],
-                mxin = me.classes[mixin];
+                mxin = me.blueprints[mixin];
             for (var item in mxin) {
-                if (item != kwd.className || item != kwd.config) {
+                if (item != [kwd.config]
+                && item != [kwd.className]
+                && item != [kwd.parenClass]
+                && item != [kwd.callParent])
                     me.copyItem(item, mxin, processedContents);
-                }
+                if (item == [kwd.config])
+                    for ( var cfg in mxin[kwd.config]) {
+                        if (!processedContents[kwd.config][cfg]) {
+                            processedContents[kwd.config][cfg] = null;
+                            me.copyItem(cfg, mxin[kwd.config], processedContents[kwd.config])
+                        }
+                    }
             }
+
         }
         delete processedContents[kwd.mixins];
 
@@ -281,14 +291,15 @@ function CMS () {
     this.copyItem = function (itemName,fromObj,toObj){
         toObj[itemName] = fromObj[itemName];
     };
-
+    // merge A into B (override is optional)
     this.mergeItems = function (objA, objB, overrideB) {
         var merged = this.clone(objB);
         for (var item in objA){
-            if(!merged[item] || overrideB)
+            if (!merged[item] || overrideB === true)
                 this.copyItem(item, objA, merged);
         }
 
+        return merged;
     };
 
     this.applySettings = function (settings,onInstance) {

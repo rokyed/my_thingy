@@ -4,127 +4,48 @@
 var cms = new CMS();
 
 
-/*
-//------------------------------------------------ class blueprinting----------------------------------
-// mixin ( no requirement to declare config)
-cms.addBlueprint("MXRock", {
-     rockThePlace: function(motto){
-         alert(motto);
-     }
-});
-// base class ( no requirement to declare config ( mixin and base class are the same thing)
-cms.addBlueprint("Animal", {
-    config: {
-        makeSound: "craaa",
-        domElem: "div",
-        domStyle: "background-color:#333333;min-width:100px;min-height:100px;position:absolute;top:10px;left:10px;",
-        domObj: null
-    },
-    domTrace: function() {
-        this.set("domObj", document.createElement(this.get("domElem")));
-        this.get("domObj").setAttribute("style",this.get("domStyle"));
-        document.body.appendChild(this.get("domObj"));
-    },
-    doSomeSounds: function() {
-        alert( this.get("makeSound"));
-    }
-});
-// extended class from base class note the action extend
-cms.addBlueprint("Bird", {
-    config: {
-        sing: "pi pi pi po"
-    },
-    singSong: function() {
-        for( var i = 0; i < 3; i ++ ) {
-            alert(this.get("sing"));
-        }
-        alert(arguments[0]);
-    }
-},"extend","Animal");
-
-// extended class from exended class
-cms.addBlueprint("Pigeon", {
-    mixins:[
-        "MXRock"
-    ],
-
-    singSong: function() {
-        this.set("sing","gotta rock to stay alive");
-        this.callParent("singSong","yeaahahhaaha");
-    }
-},"extend","Bird");
-
-// overrides anything inside class to override
-cms.addBlueprint("OVRDBird", {
-    config: {
-        sing: " i'ma skatman!"
-    },
-    singSong: function() {
-         alert(this.get("sing"));
-    }
-},"override","Bird");
-
-//------------------------ class instantiation -------------------------------
-// note last argument is optional ( callback with no arguments)
-
-// also the method returns the unique id of the class
-
-// note 'type' inside first argument(object) is the defining class
-cms.makeInstance({
-    type:"Animal",
-    config:{
-        domElem:"iframe",
-        domStyle:"position:absolute;top:200px;left:500px;width:100px;height:200px;border: solid 3px #f00;background-color:#0f0"
-    }
-},"domTrace");
-// note first argument(string) is the defining class
-cms.makeInstance("Animal",
-     {
-         config:{
-             domElem:"iframe",
-             domStyle:"position:absolute;top:200px;left:0px;width:100px;height:200px;border: solid 3px #f00;background-color:#000"
-         }
-     },"domTrace");
-
-
-//---------------------------new exemple ----------------------------------------------------------------------------
-*/
-
 cms.addBlueprint("ScreenElement",{
     config: {
-        type: "",
+        elementType: "",
         style: "",
         id: "",
-        position: "absolute",
         rect: {
             x: 0,
             y: 0,
             width: 0,
             height: 0
         },
+        uncompStyle: {
+            position:"absolute",
+            border:"solid 1px red"
+        },
         domElement: null
 
     },
     initialize: function() {
-         this.set("domElement", document.createElement(this.get("type")));
-         this.updateDom();
-         document.body.appendChild(this.get("domElement"));
+        this.compileStyle();
+        this.set("domElement", document.createElement(this.get("elementType")));
+        this.updateDom();
+        document.body.appendChild(this.get("domElement"));
     },
     resize: function(x, y, shallUpdate) {
-         var rect = this.get("rect");
-         rect.width = x;
-         rect.height = y;
-         this.set("rect",rect);
+        var rect = this.get("rect");
+        rect.width = x;
+        rect.height = y;
+        this.set("rect",rect);
 
-         if(shallUpdate) this.updateDom();
+        if(shallUpdate) this.updateDom();
     },
     position: function(x, y,shallUpdate) {
-         var rect = this.get("rect");
-         rect.x = x;
-         rect.y = y;
-         this.set("rect",rect);
+        var rect = this.get("rect");
+        rect.x = x;
+        rect.y = y;
+        this.set("rect",rect);
 
-         if(shallUpdate) this.updateDom();
+        if(shallUpdate) this.updateDom();
+    },
+    getBounds: function () {
+        return this.get("rect");
     },
     rectSetup: function(x, y, width, height,shallUpdate) {
 
@@ -134,16 +55,12 @@ cms.addBlueprint("ScreenElement",{
         var dElem = this.get("domElement"),
             rect = this.get("rect"),
             compiledStyle = "";
+        this.compileStyle();
         compiledStyle += this.get("style");
-        compiledStyle += ";position:" + this.get("position");
         compiledStyle += ";top:" + rect.y + "px";
         compiledStyle += ";left:" + rect.x + "px";
         compiledStyle += ";width:" + rect.width  + "px";
         compiledStyle += ";height:" + rect.height; + "px";
-
-
-
-
         dElem.setAttribute("style",compiledStyle);
         dElem.setAttribute("id", this.get("id"));
 
@@ -152,38 +69,6 @@ cms.addBlueprint("ScreenElement",{
         this.set("id",id);
         this.updateDom();
     },
-    destroy: function () {
-           document.body.removeChild(this.get("domElement"));
-    }
-});
-
-cms.addBlueprint("Div",{
-    config: {
-        type: "div",
-        style: "position:absolute;border:solid 1px red;",
-        uncompStyle: {
-            position:"absolute",
-            border:"solid 1px red"
-        },
-        rect: {
-            x: 20,
-            y: 20,
-            width: 300,
-            height: 200
-        },
-        direction: {
-            x: 0,
-            y: 0,
-            speed: 0
-
-
-        },
-        id: "div"
-    },
-    initialize: function() {
-         this.compileStyle();
-         this.callParent("initialize");
-    },
     setStyle: function (css,value) {
         var ustyle = this.get("uncompStyle");
             ustyle[css] = value;
@@ -191,14 +76,33 @@ cms.addBlueprint("Div",{
     },
     compileStyle: function (shallUpdate) {
 
-         var style = "",
-             ustyle = this.get("uncompStyle");
+        var style = "",
+            ustyle = this.get("uncompStyle");
 
-         for (css in ustyle) {
-             style += this.camelCaseToDash(css)+ ":" + ustyle[css] + ";";
-         }
+        for (css in ustyle) {
+            style += this.camelCaseToDash(css)+ ":" + ustyle[css] + ";";
+        }
 
-         this.set("style", style);
+        this.set("style", style);
+    },
+    camelCaseToDash: function (str) {
+
+        return str.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+    },
+    destroy: function () {
+        document.body.removeChild(this.get("domElement"));
+    }
+});
+
+
+cms.addBlueprint("Movable",{
+    config: {
+        direction: {
+            x: 0,
+            y: 0,
+            speed: 0
+        },
+        changedDirection: false
     },
     move: function (bound,deltaTime) {
         var rect = this.get("rect");
@@ -221,104 +125,205 @@ cms.addBlueprint("Div",{
         this.set("direction",direction);
         this.set("rect",rect);
         this.updateDom();
+        this.reset("changedDirection");
     },
-    camelCaseToDash: function (str) {
+    changeDirection: function (x, y) {
+        if (!this.get("changedDirection")) {
+            var dir = this.get("direction");
+            if (x == true)
+                dir.x = -dir.x;
+            if (y == true)
+                dir.y = -dir.y;
 
-         return str.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+           this.set("changedDirection",true);
+        }
+    },
+
+});
+cms.addBlueprint("Flashy",{
+    someFlash: function() {
+        return  "#" + Math.floor(Math.random() * 16777215).toString(16);
+    },
+    cameleonize: function() {
+
+        this.setStyle("backgroundColor",this.someFlash());
+
+    },
+    setBGColor: function (color) {
+        this.setStyle("backgroundColor","#"+color);
+    }
+});
+cms.addBlueprint("PreyOrPredator",{
+    config: {
+        isPredator: false
+    },
+    collidedWith: function (object) {
+        if (this.get("isPredator")) {
+            if(!object.get("isPredator")) {
+                // to continue here
+                // here predator gets to kill prey and after some preys will bread on it's own
+            }
+        } else {
+            if(!object.get("isPredator")) {
+                // and here
+                // here is breading
+
+
+
+            }
+        }
+    },
+
+
+});
+
+cms.addBlueprint("Div",{
+    mixins:["Flashy","Movable"],
+    config: {
+        elementType: "div",
+        style: "position:absolute;border:solid 1px red;",
+        rect: {
+            x: 20,
+            y: 20,
+            width: 300,
+            height: 200
+        },
+        id: "div",
+        bgColor:"f55"
+    },
+    initialize: function () {
+        this.setBGColor(this.get("bgColor"));
+        this.callParent("initialize");
     }
 
-
 },"extend","ScreenElement");
+
+cms.addBlueprint("CollisionDetector",{
+    config: {
+        collisionList:{},
+        radiusRatio:1.1
+    },
+    addToCollisionList: function (object) {
+        var collisionList = this.get("collisionList");
+        collisionList[object.$uniqueId] = object;
+        this.set("collisionList", collisionList);
+    },
+    performCollisionCheck: function () {
+        // this will be non optimized everyone collision check.
+        var cList = this.get("collisionList");
+        var radiusRatio = this.get("radiusRatio");
+        for (var target in cList) {
+            var tBound = cList[target].getBounds(),
+                aEdges = {
+                    top: tBound.y,
+                    left: tBound.x,
+                    bottom: tBound.y + tBound.height,
+                    right: tBound.x + tBound.width
+                },
+                aCenter = {
+                    x: tBound.x + tBound.width / 2,
+                    y: tBound.y + tBound.height / 2
+                },
+                actionRadius = (tBound.width + tBound.height)/2;
+
+
+
+            for (var checked in cList){
+                if (target != checked) {
+                    var cBound = cList[checked].getBounds(),
+                        bHorizontal = false,
+                        bVertical = false,
+                        bCenter = {
+                            x: cBound.x + cBound.width / 2,
+                            y: cBound.y + cBound.height / 2
+                        },
+
+                        bEdges = {
+                            top: cBound.y,
+                            left: cBound.x,
+                            bottom: cBound.y + cBound.height,
+                            right: cBound.x + cBound.width
+                        };
+
+                    var distanceBetween = Math.sqrt(
+                        ((bCenter.x - aCenter.x)*(bCenter.x - aCenter.x))+
+                        ((bCenter.y - aCenter.y)*(bCenter.y - aCenter.y))
+                        );
+                    if (distanceBetween < actionRadius * radiusRatio) {
+                        if (aEdges.top < bEdges.bottom || aEdges.bottom > bEdges.top)
+                            bVertical = true;
+                        if (aEdges.left < bEdges.right || aEdges.right > bEdges.left)
+                            bHorisontal = true;
+                        cList[checked].changeDirection(bHorizontal,bVertical);
+                        cList[target].changeDirection(bHorizontal,bVertical);
+
+
+                    }
+
+
+                }
+            }
+        }
+
+    }
+});
+
+
 
 
 
 //--------------- let's have some fun -----------------
 var myDivs;
+var CDI;
 window.onload = function() {
-
-    for (var i = 0; i < 20; i++) {
-        var hx = genHex();
-        cms.makeInstance({
-            xtype: "Div",
-            config: {
-                rect: {
-                    width: 10,
-                    height: 10,
-                    x: Math.floor(Math.random() * window.innerWidth),
-                    y: Math.floor(Math.random() * window.innerHeight)
-                },
-                direction: {
-                    x: 1,
-                    y: 1,
-                    speed: Math.floor(Math.random() * 4 + 2)
-                },
-                uncompStyle: {
-                    position:"absolute",
-                    backgroundColor:"#"+hx
-                }
-            }
-        },"initialize");
-    }
-// non traditional class declaring
-    for (var i = 0; i < 20; i++) {
-        var hx = genHex();
-        cms.makeInstance({
-            blablidylbla: "Div",
-            config: {
-                rect: {
-                    width: 10,
-                    height: 10,
-                    x: Math.floor(Math.random() * window.innerWidth),
-                    y: Math.floor(Math.random() * window.innerHeight)
-                },
-                direction: {
-                    x: 1,
-                    y: 1,
-                    speed: Math.floor(Math.random() * 10 + 2)
-                },
-                uncompStyle: {
-                    position:"absolute",
-                    borderRadius:"5px",
-                    backgroundColor:"#"+hx,
-
-                }
-            }
-        },"initialize");
-    }
+    var cdtect = cms.makeInstance("CollisionDetector",{
+    });
+    CDI = cms.getInstance(cdtect);
 
 
     window.requestAnimationFrame(doit);
+    time = new Date().getTime();
 
+    addItems(10);
 
 };
 
 
-var oldTS = null;
+
+var time;
 
 function doit(ts) {
+    var now = new Date().getTime(),
+        dt = now - (time || now);
+    time = now;
+
+    CDI.performCollisionCheck();
+
     myDivs = cms.getAllInstancesOfType("Div");
     var bounds = {
             horizontal: {
-                min: window.innerWidth / 4,
-                max: 3 * window.innerWidth / 4
+                min: 0,
+                max: window.innerWidth
             },
             vertical: {
-                min: window.innerHeight / 4,
-                max: 3 * window.innerHeight / 4
+                min: 0,
+                max: window.innerHeight
             }
         },
-        dTime = 1/(ts - oldTS);
+        dTime = dt/1000 || 1;
 
     for(var i = 0; i < myDivs.length; i++){
 
         var obJ = cms.getInstance(myDivs[i]);
 
         obJ.move(bounds,dTime);
-    }
-   // debugger;
 
-    oldTS = ts;
+    }
+
+
+
     window.requestAnimationFrame(doit);
+
 
 }
 
@@ -340,8 +345,8 @@ function deleteAll(type,method){
 }
 function addItems(number_){
      for (var i = 0; i < number_; i++) {
-        var hx = genHex();
-        cms.makeInstance({
+
+       var uid = cms.makeInstance({
             xtype: "Div",
             config: {
                 rect: {
@@ -353,15 +358,19 @@ function addItems(number_){
                 direction: {
                     x: 1,
                     y: 1,
-                    speed: Math.floor(Math.random() * 4 + 2)
+                    speed: Math.floor(Math.random() * 20 + 2)
                 },
                 uncompStyle: {
-                    position:"absolute",
-                    backgroundColor:"#"+hx
+                    position:"absolute"
+
                 }
             }
         },"initialize");
+
+        CDI.addToCollisionList(cms.getInstance(uid));
+
     }
+
 
 }
 
