@@ -231,7 +231,7 @@ function CMS () {
         };
          // generate universal resetter , requires string (name of variable)
         processedContents[kwd.reset] = function (item) {
-            this[kwd.config][item] = this.initials[item];
+            this[kwd.config][item] = this[kwd.initials][item];
         };
          // calling parent ( first paramenter is the function name , rest of parameters are parameters that parent function accepts)
         processedContents[kwd.callParent] = function(functionName) {
@@ -504,6 +504,14 @@ function CMS () {
         for (var instance in this.instantiatedClasses) {
             if (classname == this.instantiatedClasses[instance][kwd.className])
                 list.push(instance);
+        }
+        return list;
+    };
+    this.getAllInstancesOfTypeAsObj = function(classname) {
+        var list = {};
+        for (var instance in this.instantiatedClasses) {
+            if (classname == this.instantiatedClasses[instance][kwd.className])
+                list[instance] = this.instantiatedClasses[instance];
         }
         return list;
     };
